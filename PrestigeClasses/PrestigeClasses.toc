@@ -1,0 +1,14 @@
+## Interface: 11508
+## Title: Prestige Classes
+## Notes: Roleplay "enhanced classes" for Classic Hardcore. Pick a prestige class and follow its ruleset to truly become it.
+## Author: oli
+## Version: 1.0.0
+## SavedVariablesPerCharacter: PrestigeClassesCharDB
+## IconTexture: Interface\Icons\Ability_Warrior_Challange
+
+Util.lua
+Data.lua
+Compliance.lua
+Alerts.lua
+UI.lua
+Core.lua
