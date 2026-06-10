@@ -69,16 +69,35 @@ function Util.KnownProfessions()
     return known
 end
 
--- Convenience: true when the named profession is trained.
-function Util.HasProfession(name)
-    local _, isHeader = nil, nil
-    for i = 1, GetNumSkillLines() do
-        local sName, sHeader = GetSkillLineInfo(i)
-        if sName == name and not sHeader then
-            return true
+-- Snapshot of the player's talents.
+-- Returns two maps: treeName -> pointsSpent (e.g. Arms = 21) and
+-- talentName -> currentRank (e.g. ["Mortal Strike"] = 1).
+-- Classic Era: GetTalentTabInfo(tab) -> name, texture, pointsSpent, fileName
+--              GetTalentInfo(tab, i) -> name, icon, tier, column, rank, maxRank
+function Util.TalentSummary()
+    local trees, talents = {}, {}
+    for tab = 1, GetNumTalentTabs() do
+        local treeName, _, pointsSpent = GetTalentTabInfo(tab)
+        if treeName then
+            trees[treeName] = pointsSpent or 0
+        end
+        for i = 1, GetNumTalents(tab) do
+            local name, _, _, _, rank = GetTalentInfo(tab, i)
+            if name then
+                talents[name] = rank or 0
+            end
         end
     end
-    return false
+    return trees, talents
+end
+
+-- Level-based flavor rank for a path walker; shown in the UI and the
+-- death epitaph.
+function Util.RankTitle(level)
+    if level >= 60 then return "Paragon"
+    elseif level >= 40 then return "Exemplar"
+    elseif level >= 20 then return "Disciple"
+    else return "Initiate" end
 end
 
 -- Membership helper for whitelist tables stored as arrays.

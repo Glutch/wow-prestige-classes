@@ -10,6 +10,8 @@ local world = {
     equipped = {},   -- slotName -> { link, type, subType }
     pet = false,
     skills = {},     -- name -> true
+    talentTrees = {}, -- treeName -> pointsSpent
+    talentRanks = {}, -- talentName -> currentRank
 }
 
 -- slotName -> numeric id (values arbitrary, just must be stable)
@@ -49,6 +51,27 @@ function GetSkillLineInfo(i)
     for name in pairs(world.skills) do names[#names+1] = name end
     return names[i], false
 end
+local function sortedKeys(t)
+    local keys = {}
+    for k in pairs(t) do keys[#keys+1] = k end
+    table.sort(keys)
+    return keys
+end
+function GetNumTalentTabs()
+    return #sortedKeys(world.talentTrees)
+end
+function GetTalentTabInfo(i)
+    local name = sortedKeys(world.talentTrees)[i]
+    return name, nil, name and world.talentTrees[name] or 0, ""
+end
+function GetNumTalents(tab)
+    -- all known talents reported under the first tab; Util merges across tabs
+    return tab == 1 and #sortedKeys(world.talentRanks) or 0
+end
+function GetTalentInfo(tab, i)
+    local name = sortedKeys(world.talentRanks)[i]
+    return name, nil, 1, 1, name and world.talentRanks[name] or 0, 1
+end
 
 -- helper to register & equip an item
 local function equip(slot, link, itemType, subType)
@@ -82,6 +105,8 @@ world.class, world.className = "WARRIOR", "Warrior"
 world.race, world.raceName = "Orc", "Orc"
 world.level = 30
 clear()
+world.talentTrees = { Arms = 21 }
+world.talentRanks = {}
 equip("MainHandSlot", "Sword2H", "Weapon", "Two-Handed Swords")
 local def = PC.ClassById["blademaster"]
 local _, s = PC.Compliance.Evaluate(def)
@@ -114,6 +139,8 @@ world.class, world.className = "HUNTER", "Hunter"
 world.race, world.raceName = "Orc", "Orc"
 clear()
 world.pet = true
+world.talentTrees = { ["Beast Mastery"] = 16 }
+world.talentRanks = {}
 local bm = PC.ClassById["beastmaster"]
 local _, b1 = PC.Compliance.Evaluate(bm)
 check("compliant with pet", b1.compliant == true)
@@ -127,6 +154,8 @@ check("broken without pet", b2.compliant == false)
 print("\n[Marksman] gun, no pet")
 clear()
 world.pet = false
+world.talentTrees = { Marksmanship = 16 }
+world.talentRanks = { ["Aimed Shot"] = 1 }
 equip("RangedSlot", "Rifle", "Weapon", "Guns")
 local mm = PC.ClassById["marksman"]
 local _, m1 = PC.Compliance.Evaluate(mm)
@@ -150,6 +179,8 @@ world.class, world.className = "MAGE", "Mage"
 world.race, world.raceName = "Human", "Human"
 world.level = 25
 clear()
+world.talentTrees = { Arcane = 11 }
+world.talentRanks = {}
 equip("ChestSlot", "Robe", "Armor", "Cloth")
 equip("MainHandSlot", "Staff", "Weapon", "Staves")
 local am = PC.ClassById["archmage"]
@@ -171,7 +202,10 @@ check("broken with plate", a3.compliant == false)
 print("\n[Berserker] orc warrior, no shield, mail ok")
 world.class, world.className = "WARRIOR", "Warrior"
 world.race, world.raceName = "Orc", "Orc"
+world.level = 30
 clear()
+world.talentTrees = { Fury = 16 }
+world.talentRanks = {}
 equip("ChestSlot", "MailChest", "Armor", "Mail")
 local bz = PC.ClassById["berserker"]
 local _, z1 = PC.Compliance.Evaluate(bz)
@@ -193,10 +227,190 @@ print("\n[Profession] suggestion is info-only")
 world.class, world.className = "WARRIOR", "Warrior"
 world.race, world.raceName = "Orc", "Orc"
 clear()
+world.talentTrees = { Arms = 21 }
+world.talentRanks = {}
 equip("MainHandSlot", "Sword2H", "Weapon", "Two-Handed Swords")
 world.skills = {} -- no professions known
 local _, p1 = PC.Compliance.Evaluate(PC.ClassById["blademaster"])
 check("compliant despite no profession", p1.compliant == true)
+
+-- ========================================================================
+-- Test 7: Demon Hunter — dual wield requirement
+-- ========================================================================
+print("\n[Demon Hunter] night elf rogue, twin swords, bare head/chest")
+world.class, world.className = "ROGUE", "Rogue"
+world.race, world.raceName = "NightElf", "Night Elf"
+world.level = 30
+clear()
+world.talentTrees = { Combat = 16 }
+world.talentRanks = {}
+equip("MainHandSlot", "SwordMH", "Weapon", "One-Handed Swords")
+equip("SecondaryHandSlot", "SwordOH", "Weapon", "One-Handed Swords")
+local dh = PC.ClassById["demonhunter"]
+local _, d1 = PC.Compliance.Evaluate(dh)
+check("compliant dual wield", d1.compliant == true)
+print("[Demon Hunter] one sword only -> broken")
+world.equipped["SecondaryHandSlot"] = nil
+local _, d2 = PC.Compliance.Evaluate(dh)
+check("broken single weapon", d2.compliant == false)
+print("[Demon Hunter] helm on -> broken")
+equip("SecondaryHandSlot", "SwordOH", "Weapon", "One-Handed Swords")
+equip("HeadSlot", "Blindfold", "Armor", "Leather")
+local _, d3 = PC.Compliance.Evaluate(dh)
+check("broken with helm", d3.compliant == false)
+
+-- ========================================================================
+-- Test 8: Tinker — required profession is a hard rule
+-- ========================================================================
+print("\n[Tinker] gnome warrior with gun, Engineering required")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Gnome", "Gnome"
+clear()
+equip("RangedSlot", "BoomStick", "Weapon", "Guns")
+world.skills = {}
+local tk = PC.ClassById["tinker"]
+local _, t1 = PC.Compliance.Evaluate(tk)
+check("broken without Engineering", t1.compliant == false)
+world.skills = { Engineering = true }
+local _, t2 = PC.Compliance.Evaluate(tk)
+check("compliant with Engineering", t2.compliant == true)
+world.skills = {}
+
+-- ========================================================================
+-- Test 9: Eligibility helper
+-- ========================================================================
+print("\n[Eligible] race/class gating")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Orc", "Orc"
+check("orc warrior eligible for blademaster",
+    PC.Compliance.Eligible(PC.ClassById["blademaster"]) == true)
+check("orc warrior not eligible for archmage",
+    PC.Compliance.Eligible(PC.ClassById["archmage"]) == false)
+check("any-race rule: orc warrior eligible for gladiator",
+    PC.Compliance.Eligible(PC.ClassById["gladiator"]) == true)
+
+-- ========================================================================
+-- Test 10: Buccaneer — sword + gun rogue
+-- ========================================================================
+print("\n[Buccaneer] rogue with cutlass and pistol")
+world.class, world.className = "ROGUE", "Rogue"
+world.race, world.raceName = "Human", "Human"
+clear()
+world.talentTrees = { Combat = 16 }
+world.talentRanks = { Riposte = 1 }
+equip("MainHandSlot", "Cutlass", "Weapon", "One-Handed Swords")
+equip("RangedSlot", "Pistol", "Weapon", "Guns")
+local bc = PC.ClassById["buccaneer"]
+local _, c1 = PC.Compliance.Evaluate(bc)
+check("compliant buccaneer", c1.compliant == true)
+print("[Buccaneer] bow instead of gun -> broken")
+equip("RangedSlot", "Bow", "Weapon", "Bows")
+local _, c2 = PC.Compliance.Evaluate(bc)
+check("broken with bow", c2.compliant == false)
+
+-- ========================================================================
+-- Test 11: talent tree scaling + key talents
+-- ========================================================================
+print("\n[Talents] Blademaster at 60 with full Arms + key talents")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Orc", "Orc"
+world.level = 60
+clear()
+equip("MainHandSlot", "Sword2H", "Weapon", "Two-Handed Swords")
+world.talentTrees = { Arms = 31 }
+world.talentRanks = { ["Sweeping Strikes"] = 1, ["Mortal Strike"] = 1 }
+local bl = PC.ClassById["blademaster"]
+local _, t60 = PC.Compliance.Evaluate(bl)
+check("compliant at 60 full Arms", t60.compliant == true)
+
+print("[Talents] only 20 points in Arms at 60 -> broken")
+world.talentTrees = { Arms = 20 }
+local _, t60b = PC.Compliance.Evaluate(bl)
+check("broken with shallow tree", t60b.compliant == false)
+
+print("[Talents] missing Mortal Strike at 60 -> broken")
+world.talentTrees = { Arms = 31 }
+world.talentRanks = { ["Sweeping Strikes"] = 1 }
+local _, t60c = PC.Compliance.Evaluate(bl)
+check("broken without key talent", t60c.compliant == false)
+
+print("[Talents] key talents not yet due at level 20 -> fine")
+world.level = 20
+world.talentTrees = { Arms = 11 }
+world.talentRanks = {}
+local _, t20 = PC.Compliance.Evaluate(bl)
+check("compliant at 20, capstones pending", t20.compliant == true)
+
+-- ========================================================================
+-- Test 12: key talent rank requirement (Witch Doctor: Totemic Focus 5/5)
+-- ========================================================================
+print("\n[Witch Doctor] troll shaman, rank requirement")
+world.class, world.className = "SHAMAN", "Shaman"
+world.race, world.raceName = "Troll", "Troll"
+world.level = 30
+clear()
+equip("MainHandSlot", "BoneKnife", "Weapon", "Daggers")
+world.skills = { Alchemy = true }
+world.talentTrees = { Restoration = 10 }
+world.talentRanks = { ["Totemic Focus"] = 3 }
+local wd = PC.ClassById["witchdoctor"]
+local _, w1 = PC.Compliance.Evaluate(wd)
+check("broken at rank 3/5", w1.compliant == false)
+world.talentRanks = { ["Totemic Focus"] = 5 }
+local _, w2 = PC.Compliance.Evaluate(wd)
+check("compliant at rank 5/5", w2.compliant == true)
+world.skills = {}
+
+-- ========================================================================
+-- Test 13: multi-class talent spec picks the player's class
+-- ========================================================================
+print("\n[Duelist] warrior uses Arms spec, rogue uses Combat spec")
+world.level = 30
+clear()
+equip("MainHandSlot", "Rapier", "Weapon", "One-Handed Swords")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Human", "Human"
+world.talentTrees = { Arms = 16 }
+world.talentRanks = {}
+local du = PC.ClassById["duelist"]
+local _, du1 = PC.Compliance.Evaluate(du)
+check("warrior duelist compliant on Arms", du1.compliant == true)
+world.class, world.className = "ROGUE", "Rogue"
+local _, du2 = PC.Compliance.Evaluate(du)
+check("rogue duelist broken on Arms-only build", du2.compliant == false)
+world.talentTrees = { Combat = 16 }
+world.talentRanks = { Riposte = 1 }
+local _, du3 = PC.Compliance.Evaluate(du)
+check("rogue duelist compliant on Combat + Riposte", du3.compliant == true)
+
+-- ========================================================================
+-- Test 14: fishing poles suspend weapon vows instead of breaking them
+-- ========================================================================
+print("\n[Fishing] blademaster with pole in hand stays compliant")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Orc", "Orc"
+world.level = 30
+clear()
+world.talentTrees = { Arms = 21 }
+world.talentRanks = {}
+equip("MainHandSlot", "Pole", "Weapon", "Fishing Poles")
+local _, f1 = PC.Compliance.Evaluate(PC.ClassById["blademaster"])
+check("compliant while fishing", f1.compliant == true)
+
+print("[Fishing] bare hands (no pole) still break the weapon vow")
+clear()
+local _, f2 = PC.Compliance.Evaluate(PC.ClassById["blademaster"])
+check("broken bare-handed", f2.compliant == false)
+
+print("[Fishing] dual-wield path tolerates the pole")
+world.class, world.className = "ROGUE", "Rogue"
+world.race, world.raceName = "NightElf", "Night Elf"
+clear()
+world.talentTrees = { Combat = 16 }
+world.talentRanks = {}
+equip("MainHandSlot", "Pole", "Weapon", "Fishing Poles")
+local _, f3 = PC.Compliance.Evaluate(PC.ClassById["demonhunter"])
+check("demon hunter compliant while fishing", f3.compliant == true)
 
 -- ---- summary -------------------------------------------------------------
 print(string.format("\n==== %d passed, %d failed ====", pass, fail))

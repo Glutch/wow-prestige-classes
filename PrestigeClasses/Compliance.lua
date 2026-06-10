@@ -102,6 +102,7 @@ local function checkWeaponTypes(def, out)
     if not def.weaponTypes then return end
     local offenders = {}
     local count = 0
+    local fishing = false
     for _, slot in ipairs({ "MainHandSlot", "SecondaryHandSlot" }) do
         local link = Util.EquippedLink(slot)
         if link then
@@ -109,20 +110,57 @@ local function checkWeaponTypes(def, out)
             -- Only judge actual weapons; an off-hand shield/holdable is covered
             -- by forbidShield or simply ignored here.
             if itemType == "Weapon" then
-                count = count + 1
-                if not Util.ListContains(def.weaponTypes, subType) then
-                    offenders[#offenders + 1] = link
+                -- A fishing pole is a tool, not a betrayal of the discipline.
+                if subType == "Fishing Poles" then
+                    fishing = true
+                else
+                    count = count + 1
+                    if not Util.ListContains(def.weaponTypes, subType) then
+                        offenders[#offenders + 1] = link
+                    end
                 end
             end
         end
     end
-    local ok = #offenders == 0 and count > 0
+    local ok = #offenders == 0 and (count > 0 or fishing)
+    local detail
+    if #offenders > 0 then
+        detail = "Wrong weapon: " .. table.concat(offenders, ", ")
+    elseif count == 0 and fishing then
+        detail = "Fishing — the vow rests while you fish"
+    elseif count == 0 then
+        detail = "Equip an allowed weapon"
+    else
+        detail = "Your weapon fits the discipline"
+    end
+    out[#out + 1] = res("Weapon: " .. joinOr(def.weaponTypes), ok, detail, "rule")
+end
+
+local function checkDualWield(def, out)
+    if not def.requireDualWield then return end
+    local holding = 0
+    local fishing = false
+    for _, slot in ipairs({ "MainHandSlot", "SecondaryHandSlot" }) do
+        local link = Util.EquippedLink(slot)
+        if link then
+            local itemType, subType = Util.ItemTypeInfo(link)
+            if itemType == "Weapon" then
+                if subType == "Fishing Poles" then
+                    fishing = true
+                else
+                    holding = holding + 1
+                end
+            end
+        end
+    end
+    -- A pole occupies both hands; fishing suspends the vow rather than breaks it.
+    local ok = holding == 2 or fishing
     out[#out + 1] = res(
-        "Weapon: " .. joinOr(def.weaponTypes),
+        "A weapon in each hand",
         ok,
-        count == 0 and "Equip an allowed weapon"
-            or (#offenders == 0 and "Your weapon fits the discipline"
-                or ("Wrong weapon: " .. table.concat(offenders, ", "))),
+        (fishing and holding == 0) and "Fishing — the vow rests while you fish"
+            or (ok and "Both hands armed"
+                or "Equip a weapon in both main and off hand"),
         "rule"
     )
 end
@@ -178,7 +216,97 @@ local function checkPet(def, out)
     end
 end
 
--- ---- suggestions ---------------------------------------------------------
+-- ---- talents ---------------------------------------------------------------
+
+-- A path's talent spec may be shared (def.talents = { tree=..., keys=... })
+-- or differ per class (def.talents = { WARRIOR = {...}, ROGUE = {...} }).
+local function talentSpecFor(def)
+    local t = def.talents
+    if not t then return nil end
+    if t.tree or t.keys then return t end
+    return t[(Util.PlayerClass())]
+end
+
+-- How deep in the tree we expect a player of this level to be. Talent points
+-- start at level 10; SLACK leaves a few points free for off-tree utility
+-- until the target is reached (full target is expected by level 45 for 31).
+local TREE_SLACK = 5
+local function expectedTreePoints(target, level)
+    local expected = level - 9 - TREE_SLACK
+    if expected < 0 then expected = 0 end
+    if expected > target then expected = target end
+    return expected
+end
+
+local function checkTalents(def, out)
+    local spec = talentSpecFor(def)
+    if not spec then return end
+    local level = UnitLevel("player")
+    local trees, talents = Util.TalentSummary()
+
+    if spec.tree then
+        local target = spec.tree.points or 31
+        local expected = expectedTreePoints(target, level)
+        local have = trees[spec.tree.name] or 0
+        if expected > 0 then
+            out[#out + 1] = res(
+                "Talents: " .. spec.tree.name .. " (" .. target .. "+ pts)",
+                have >= expected,
+                have .. "/" .. target .. " points — your level calls for at least " .. expected,
+                "rule"
+            )
+        else
+            out[#out + 1] = res(
+                "Talents: " .. spec.tree.name .. " (" .. target .. "+ pts)",
+                true,
+                "Spend your points in " .. spec.tree.name .. " as you level",
+                "info"
+            )
+        end
+    end
+
+    for _, k in ipairs(spec.keys or {}) do
+        local needRank = k.rank or 1
+        local haveRank = talents[k.name] or 0
+        local label = "Talent: " .. k.name ..
+            (needRank > 1 and (" (rank " .. needRank .. ")") or "")
+        if level >= (k.level or 10) then
+            out[#out + 1] = res(
+                label,
+                haveRank >= needRank,
+                haveRank >= needRank and "Learned"
+                    or ("Learn it — the path demands it from level " .. (k.level or 10)),
+                "rule"
+            )
+        else
+            out[#out + 1] = res(
+                label,
+                haveRank >= needRank,
+                "Required from level " .. (k.level or 10),
+                "info"
+            )
+        end
+    end
+end
+
+-- ---- professions ----------------------------------------------------------
+
+-- Hard requirement: at least one of the listed professions must be trained.
+local function checkRequiredProfession(def, out)
+    if not def.requireProfession then return end
+    local known = Util.KnownProfessions()
+    local have = {}
+    for _, p in ipairs(def.requireProfession) do
+        if known[p] then have[#have + 1] = p end
+    end
+    out[#out + 1] = res(
+        "Trained: " .. joinOr(def.requireProfession),
+        #have > 0,
+        #have > 0 and ("Trained in " .. table.concat(have, ", "))
+            or ("Visit a trainer — " .. joinOr(def.requireProfession) .. " is this path's craft"),
+        "rule"
+    )
+end
 
 local function checkProfession(def, out)
     if not def.profession then return end
@@ -205,9 +333,12 @@ function C.Evaluate(def)
     checkForbiddenSlots(def, out)
     checkMaxArmor(def, out)
     checkWeaponTypes(def, out)
+    checkDualWield(def, out)
     checkForbidShield(def, out)
     checkRangedTypes(def, out)
     checkPet(def, out)
+    checkTalents(def, out)
+    checkRequiredProfession(def, out)
     checkProfession(def, out)
 
     local identityOk, rulesTotal, rulesPassed = true, 0, 0
@@ -228,4 +359,16 @@ function C.Evaluate(def)
         compliant = identityOk and rulesPassed == rulesTotal,
     }
     return out, summary
+end
+
+-- True when the player's race and class can ever satisfy this path. Level is
+-- deliberately ignored: an underleveled character can still grow into it.
+function C.Eligible(def)
+    if def.races and not Util.ListContains(def.races, (Util.PlayerRace())) then
+        return false
+    end
+    if def.classes and not Util.ListContains(def.classes, (Util.PlayerClass())) then
+        return false
+    end
+    return true
 end

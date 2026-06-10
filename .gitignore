@@ -1,2 +1,3 @@
 .DS_Store
-*.original.md
+tools/cache/
+tools/facts.json
