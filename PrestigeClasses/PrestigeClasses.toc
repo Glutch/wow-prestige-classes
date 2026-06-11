@@ -14,5 +14,6 @@ Alerts.lua
 Trials.lua
 Trials\MountainKing.lua
 Trials\Blademaster.lua
+Trials\Beastmaster.lua
 UI.lua
 Core.lua

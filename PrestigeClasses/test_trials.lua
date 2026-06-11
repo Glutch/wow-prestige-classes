@@ -113,6 +113,7 @@ loadmod("Compliance.lua")
 loadmod("Trials.lua")
 loadmod("Trials/MountainKing.lua")
 loadmod("Trials/Blademaster.lua")
+loadmod("Trials/Beastmaster.lua")
 
 local T = PC.Trials
 
@@ -453,6 +454,58 @@ print("\n[Emote] the final bow waits for the Paragon")
 world.zone, world.subzone = "Durotar", "Valley of Trials"
 T.OnEmote("BOW")
 check("chapter IV sealed to a Disciple", not T.IsComplete(bmTrial("bm_firstdust")))
+
+-- ---- the Beastmaster's journey ----------------------------------------------
+local bst = PC.ClassById.beastmaster
+local function bstTrial(id)
+    for _, tr in ipairs(bst.trials) do
+        if tr.id == id then return tr end
+    end
+end
+
+print("\n[Beastmaster] the journey lints clean")
+local bstProblems = T.Lint(bst)
+for _, p in ipairs(bstProblems) do print("    lint: " .. p) end
+check("beastmaster lints clean", #bstProblems == 0)
+
+print("\n[Beastmaster] a hunter takes the wild's oath")
+world.class, world.className = "HUNTER", "Hunter"
+world.race, world.raceName = "Orc", "Orc"
+world.level = 25
+world.talentTrees = { ["Beast Mastery"] = 11 }
+world.talentRanks = {}
+world.buffs = {}
+world.pet = true
+world.equipped = {}
+world.inGroup = false
+PrestigeClassesCharDB.active = "beastmaster"
+T.OnPathChanged()
+T.OnSpellSuccess("Tame Beast")
+check("the first bond is sworn anywhere", T.IsComplete(bstTrial("bst_bond")))
+
+print("\n[Beastmaster] the beast's deeds are the master's deeds")
+slay("Serena Bloodfeather")
+check("the Bloodfeather falls to the pair", T.IsComplete(bstTrial("bst_bloodfeather")))
+check("Disciple after the Bloodfeather", T.RankInfo(bst) == 2)
+T.OnCombatEvent("SWING_DAMAGE", "guid-pet", "guid-boar", "Razormane Hunter", nil)
+T.OnCombatEvent("UNIT_DIED", nil, "guid-boar", "Razormane Hunter", nil)
+check("a kill the beast made alone still counts", T.State("bst_spines").progress == 1)
+T.OnCombatEvent("SPELL_AURA_APPLIED", "guid-pet", "guid-boar2", "Razormane Hunter", "Screech")
+check("the hawk's cry lands for the pair", T.State("bst_hawkcry").progress == 1)
+
+print("\n[Beastmaster] the great tames are bound to their wilds")
+world.zone, world.subzone = "Dun Morogh", ""
+T.OnSpellSuccess("Tame Beast")
+check("no pridelord in the wrong wilds", not T.IsComplete(bstTrial("bst_pridelord")))
+world.zone = "The Barrens"
+T.OnSpellSuccess("Tame Beast")
+check("the black lion answers in the Barrens", T.IsComplete(bstTrial("bst_pridelord")))
+
+print("\n[Beastmaster] the ledger hears the Company's many badges")
+slay("Venture Co. Logger")
+slay("Venture Co. Overseer")
+check("the ledger counts two despoilers", T.State("bst_ledger").progress == 2)
+check("the purge counts alongside", T.State("bst_venture").progress == 2)
 
 -- ---- summary ---------------------------------------------------------------
 print(string.format("\n==== %d passed, %d failed ====", pass, fail))
