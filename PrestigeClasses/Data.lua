@@ -749,8 +749,13 @@ end
 -- file calls:
 --
 --   PC.RegisterTrials("mountainking", {
---       chapters = { [0] = "...", "Chapter I — ...", ... }, -- journal headings
---       trials   = { ... }, -- format documented at the top of Trials.lua
+--       chapters  = { [0] = "...", "Chapter I — ...", ... }, -- journal headings
+--       trials    = { ... }, -- format documented at the top of Trials.lua
+--       itemIds   = { ["Item Name"] = itemId, ... }, -- every item a deed
+--                   -- names (items/item/crafted spell result); drives the
+--                   -- hoverable spoils strip on the path page
+--       suggested = { { id = n, name = "...", note = "..." }, ... },
+--                   -- thematic gear beyond what the deeds demand
 --   })
 --
 -- To give another class a journey: create Trials\<Class>.lua, register it
@@ -765,4 +770,6 @@ function PC.RegisterTrials(classId, journey)
     end
     def.trialChapters = journey.chapters
     def.trials = journey.trials
+    def.itemIds = journey.itemIds
+    def.suggestedItems = journey.suggested
 end

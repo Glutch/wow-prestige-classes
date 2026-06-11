@@ -682,6 +682,23 @@ function T.Lint(def)
                 " has no rank trial — rank " .. (c + 1) .. " would come free"
         end
     end
+    -- Every item a deed names needs a verified ID, or the item strips and
+    -- tooltips on the path page silently lose it.
+    local ids = def.itemIds or {}
+    for _, trial in ipairs(def.trials) do
+        for _, n in ipairs(trial.items or {}) do
+            if not ids[n] then bad(trial, "item '" .. n .. "' missing from itemIds") end
+        end
+        if trial.item and not ids[trial.item] then
+            bad(trial, "item '" .. trial.item .. "' missing from itemIds")
+        end
+    end
+    for i, s in ipairs(def.suggestedItems or {}) do
+        if not (s.id and s.name and s.note) then
+            problems[#problems + 1] = def.id .. ": suggested[" .. i ..
+                "] needs id, name and note"
+        end
+    end
     return problems
 end
 

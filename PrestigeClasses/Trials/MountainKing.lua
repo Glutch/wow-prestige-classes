@@ -10,6 +10,42 @@ local ADDON, PC = ...
 -- =========================================================================
 
 PC.RegisterTrials("mountainking", {
+    -- Item IDs verified against ItemSparse DB2 (tools/verify_data.py).
+    itemIds = {
+        ["Heavy Copper Maul"] = 6214,
+        ["Smite's Mighty Hammer"] = 7230,
+        ["Mograine's Might"] = 7723,
+        ["The Rockpounder"] = 9413,
+        ["Dark Iron Ore"] = 11370,
+        ["The Unstoppable Force"] = 19323,
+        ["Sulfuras, Hand of Ragnaros"] = 17182,
+    },
+    suggested = {
+        { id = 9412, name = "Galgann's Fireblaster",
+          note = "Galgann Firehammer, Uldaman — a Dark Iron's own gun, turned on his kin" },
+        { id = 11608, name = "Dark Iron Pulverizer",
+          note = "Smith it yourself at the Black Anvil — 18 Dark Iron Bars" },
+        { id = 20130, name = "Diamond Flask",
+          note = "Warrior quest \"Voodoo Feathers\" — served on the rocks" },
+        { id = 11815, name = "Hand of Justice",
+          note = "Emperor Dagran Thaurissan, Blackrock Depths" },
+        { id = 12631, name = "Fiery Plate Gauntlets",
+          note = "Blacksmithing 290 — found unfired in Blackrock Spire, finished in Everlook" },
+        { id = 2099, name = "Dwarven Hand Cannon",
+          note = "World drop — the King's thunder for your back" },
+        { id = 12796, name = "Hammer of the Titans",
+          note = "Blacksmithing 300 — Thorium and Arcanite, master's work" },
+        { id = 17073, name = "Earthshaker",
+          note = "Magmadar, Molten Core — the mountain answers" },
+        { id = 19104, name = "Stormstrike Hammer",
+          note = "Stormpike Revered — the clan's own one-hand warhammer" },
+        { id = 12798, name = "Annihilator",
+          note = "Master Axesmith 300 — a hand axe off your own anvil" },
+        { id = 17068, name = "Deathbringer",
+          note = "Onyxia's hoard — a hand axe for the off fist" },
+        { id = 19363, name = "Crul'shorukh, Edge of Chaos",
+          note = "Nefarian, Blackwing Lair — the heaviest hand axe there is" },
+    },
     chapters = {
         [0] = "The Book of Grudges",
         "Chapter I — Sons of the Mountain",

@@ -307,6 +307,122 @@ local function refreshBrowse(f)
 end
 
 -- ------------------------------------------------------------------------
+-- Item strips: the spoils a journey awards and the arms it suggests.
+-- Hover for the live tooltip; shift-click links to chat, right-click
+-- (or ctrl-click) opens the dressing room.
+-- ------------------------------------------------------------------------
+local QUESTION_ICON = "Interface\\Icons\\INV_Misc_QuestionMark"
+
+local function collectSpoils(def)
+    if not (def.trials and def.itemIds) then return {} end
+    local suggested = {}
+    for _, s in ipairs(def.suggestedItems or {}) do suggested[s.name] = true end
+    local seen, list = {}, {}
+    local function add(name)
+        local id = name and def.itemIds[name]
+        if id and not seen[name] and not suggested[name] then
+            seen[name] = true
+            list[#list + 1] = { id = id, name = name }
+        end
+    end
+    for _, trial in ipairs(def.trials) do
+        for _, name in ipairs(trial.items or {}) do add(name) end
+        add(trial.item)
+        add(trial.spell) -- crafted deeds: the spell and its item share a name
+    end
+    return list
+end
+
+local function itemButton(pane, i)
+    local b = pane.itemButtons[i]
+    if b then return b end
+    b = CreateFrame("Button", nil, pane.scrollChild)
+    b:SetSize(32, 32)
+    b.icon = b:CreateTexture(nil, "ARTWORK")
+    b.icon:SetAllPoints()
+    b.icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
+    b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    b:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetHyperlink("item:" .. self.itemId)
+        if self.note then
+            GameTooltip:AddLine(self.note, 0.78, 0.72, 0.47, true)
+        end
+        GameTooltip:Show()
+    end)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:SetScript("OnClick", function(self, mouse)
+        local _, link = GetItemInfo(self.itemId)
+        if IsModifiedClick("CHATLINK") and link then
+            ChatEdit_InsertLink(link)
+        elseif mouse == "RightButton" or IsModifiedClick("DRESSUP") then
+            DressUpItemLink(link or ("item:" .. self.itemId))
+        end
+    end)
+    pane.itemButtons[i] = b
+    return b
+end
+
+-- Lays out both strips below the two text columns; returns the total
+-- scroll-child height.
+local ITEMS_PER_ROW = 16
+
+local function layoutItemStrips(pane, def)
+    for _, b in ipairs(pane.itemButtons) do b:Hide() end
+    for _, h in ipairs(pane.itemHeaders) do h:Hide() end
+    local y = -(math.max(pane.reqText:GetStringHeight(),
+        pane.vowText:GetStringHeight()) + 18)
+    local n, hn = 0, 0
+    local function header(text)
+        hn = hn + 1
+        local h = pane.itemHeaders[hn]
+        if not h then
+            h = pane.scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            h:SetJustifyH("LEFT")
+            pane.itemHeaders[hn] = h
+        end
+        h:ClearAllPoints()
+        h:SetPoint("TOPLEFT", 0, y)
+        h:SetText(text)
+        h:Show()
+        y = y - 22
+    end
+    local function strip(entries)
+        local col = 0
+        for _, e in ipairs(entries) do
+            n = n + 1
+            local b = itemButton(pane, n)
+            b.itemId, b.note = e.id, e.note
+            b.icon:SetTexture(GetItemIcon and GetItemIcon(e.id) or QUESTION_ICON)
+            b:ClearAllPoints()
+            b:SetPoint("TOPLEFT", col * 38, y)
+            b:Show()
+            -- Warm the item cache so the first hover shows a real tooltip.
+            if C_Item and C_Item.RequestLoadItemDataByID then
+                C_Item.RequestLoadItemDataByID(e.id)
+            end
+            col = col + 1
+            if col >= ITEMS_PER_ROW then col = 0; y = y - 38 end
+        end
+        if col > 0 then y = y - 38 end
+        y = y - 8
+    end
+    local spoils = collectSpoils(def)
+    if #spoils > 0 then
+        header(GOLD .. "Spoils of the path" .. R ..
+            GREY .. "  — what the deeds award" .. R)
+        strip(spoils)
+    end
+    if def.suggestedItems and #def.suggestedItems > 0 then
+        header(GOLD .. "Suggested arms" .. R ..
+            GREY .. "  — worth chasing along the way" .. R)
+        strip(def.suggestedItems)
+    end
+    return -y
+end
+
+-- ------------------------------------------------------------------------
 -- Detail page: one path, full window
 -- ------------------------------------------------------------------------
 local function createDetailPane(f)
@@ -376,6 +492,9 @@ local function createDetailPane(f)
     vowText:SetSpacing(3)
     pane.vowText = vowText
 
+    pane.itemButtons = {}
+    pane.itemHeaders = {}
+
     local activate = CreateFrame("Button", nil, pane, "UIPanelButtonTemplate")
     activate:SetSize(180, 26)
     activate:SetPoint("BOTTOMLEFT", 0, 0)
@@ -438,8 +557,7 @@ local function refreshDetail(f)
 
     pane.reqText:SetText(buildReqText(def))
     pane.vowText:SetText(buildVowText(def))
-    pane.scrollChild:SetHeight(math.max(
-        pane.reqText:GetStringHeight(), pane.vowText:GetStringHeight()) + 10)
+    pane.scrollChild:SetHeight(layoutItemStrips(pane, def) + 10)
 
     if activeId == def.id then
         pane.activateBtn:SetText("Re-affirm vows")

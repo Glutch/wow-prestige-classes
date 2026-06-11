@@ -121,7 +121,9 @@ def main():
     wmo = column(db2_csv("WMOAreaTable"), "AreaName_lang")
     maps = column(db2_csv("Map"), "MapName_lang")
     spells = set(s.lower() for s in column(db2_csv("SpellName"), "Name_lang"))
-    items = set(i.lower() for i in column(db2_csv("ItemSparse"), "Display_lang"))
+    item_rows = db2_csv("ItemSparse")
+    items = set(i.lower() for i in column(item_rows, "Display_lang"))
+    item_by_id = {r.get("ID"): r.get("Display_lang") for r in item_rows}
     tokens = emote_tokens()
 
     ok, warn, fail = 0, 0, 0
@@ -158,6 +160,15 @@ def main():
                 report("OK", fact, "exact ItemSparse match")
             else:
                 report("FAIL", fact, "not in ItemSparse")
+        elif kind == "itemid":
+            iid, _, name = value.partition("|")
+            actual = item_by_id.get(iid)
+            if actual == name:
+                report("OK", fact, f"id {iid} matches ItemSparse name")
+            elif actual is None:
+                report("FAIL", fact, f"id {iid} not in ItemSparse")
+            else:
+                report("FAIL", fact, f"id {iid} is {actual!r} in ItemSparse")
         elif kind == "emote":
             if tokens is None:
                 report("WARN", fact, "token list unavailable; check manually")

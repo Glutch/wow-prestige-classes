@@ -72,7 +72,11 @@ Modules share the private addon table: `local ADDON, PC = ...`.
 
 Append to `Data.lua` (field docs in its header): id/name/source/faction,
 `icon` (verify the texture exists in Classic-era files), fantasy, rule
-fields, `talents`, `breakCry`/`restoreCry`, 3 `honorRules`. Keep faction
+fields, `talents`, `breakCry`/`restoreCry`, 3 `honorRules`. A journey's
+`RegisterTrials` also takes `itemIds` (name→verified item ID — lint requires
+one for every item a deed names; drives the hoverable spoils/suggested
+strips on the path page) and `suggested` ({id,name,note} gear list — the
+site consumes it via `bun run data`, never hand-edit the site copy). Keep faction
 balance roughly even (currently A:8 H:9 Both:8). Race tokens are file tokens:
 `Scourge` (undead), `NightElf`. Class entries appear automatically in the UI
 under each class in `classes` and in eligibility sorting — no UI changes

@@ -46,6 +46,16 @@ for _, def in ipairs(PC.Classes) do
         end
         if trial.emote then fact("emote", trial.emote, src) end
     end
+    -- Item IDs (UI strips): verified as id|name pairs against ItemSparse.
+    local names = {}
+    for name in pairs(def.itemIds or {}) do names[#names + 1] = name end
+    table.sort(names)
+    for _, name in ipairs(names) do
+        fact("itemid", def.itemIds[name] .. "|" .. name, def.id .. "/itemIds")
+    end
+    for _, s in ipairs(def.suggestedItems or {}) do
+        fact("itemid", s.id .. "|" .. s.name, def.id .. "/suggested")
+    end
 end
 
 local function jsonEscape(s)
