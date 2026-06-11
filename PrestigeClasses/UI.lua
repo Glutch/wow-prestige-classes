@@ -1059,10 +1059,19 @@ local function createCharacterSidebar()
     panel.body = bodyFS
 
     local recordFS = Theme.Text(panel, "body", 11)
-    recordFS:SetPoint("BOTTOMLEFT", 14, 48)
+    recordFS:SetPoint("BOTTOMLEFT", 14, 84)
     recordFS:SetWidth(212)
     recordFS:SetSpacing(3)
     panel.record = recordFS
+
+    local deedsHead = Theme.Text(panel, "display", 9, Theme.COLOR.muted)
+    deedsHead:SetPoint("BOTTOMLEFT", 14, 62)
+    deedsHead:SetText(Theme.Spaced("Deeds Done"))
+    panel.deedsHead = deedsHead
+
+    local deedsBar = Theme.ProgressBar(panel, 212, 11)
+    deedsBar:SetPoint("BOTTOMLEFT", 14, 46)
+    panel.deedsBar = deedsBar
 
     local codexBtn = Theme.Button(panel, "Codex")
     codexBtn:SetSize(102, 24)
@@ -1099,12 +1108,23 @@ function UI.RefreshCharacterSidebar()
         panel.codexBtn.SetLabel("Choose a Path")
         panel.codexBtn:SetSize(212, 24)
         panel.pathBtn:Hide()
+        panel.deedsHead:Hide()
+        panel.deedsBar:Hide()
         return
     end
     panel.codexBtn.SetLabel("Codex")
     panel.codexBtn:SetSize(102, 24)
     panel.pathBtn:Show()
     panel.pathBtn:SetEnabled(def.trials ~= nil)
+    if def.trials and PC.Trials then
+        local done, total = PC.Trials.Counts(def)
+        panel.deedsBar.SetProgress(done, total)
+        panel.deedsHead:Show()
+        panel.deedsBar:Show()
+    else
+        panel.deedsHead:Hide()
+        panel.deedsBar:Hide()
+    end
 
     panel.slot.icon:SetTexture(def.icon)
     panel.name:SetText(def.name)
@@ -1156,10 +1176,6 @@ function UI.RefreshCharacterSidebar()
             rec[#rec + 1] = TEXT .. "Vows broken: " .. R .. RED .. breaks .. R ..
                 GREY .. "  (clean " .. daysAgoText(s.lastBreakAt or s.chosenAt) .. ")" .. R
         end
-    end
-    if def.trials and PC.Trials then
-        local done, total = PC.Trials.Counts(def)
-        rec[#rec + 1] = TEXT .. "Deeds done: " .. R .. GOLD .. done .. "/" .. total .. R
     end
     panel.record:SetText(table.concat(rec, "\n"))
 end
