@@ -51,7 +51,7 @@ PC.Classes = {
     {
         id = "blademaster",
         name = "Blademaster",
-        source = "Warcraft III / Orcish tradition",
+        source = "Warcraft III / Horde Player's Guide",
         faction = "Horde",
         icon = ICONS .. "Ability_Warrior_SavageBlow",
         fantasy = "A master of the blade who scorns heavy armor, trusting reflexes and a single great sword. Disciplined, deadly, and never weighed down.",
@@ -62,8 +62,9 @@ PC.Classes = {
         talents = {
             tree = { name = "Arms", points = 31 },
             keys = {
-                { name = "Sweeping Strikes", level = 32 }, -- the Bladestorm
-                { name = "Mortal Strike", level = 42 },    -- the killing blow
+                { name = "Sweeping Strikes", level = 32 },           -- the Bladestorm
+                { name = "Sword Specialization", rank = 5, level = 34 }, -- the flurry of blades
+                { name = "Mortal Strike", level = 42 },              -- the killing blow
             },
         },
         profession = { "Blacksmithing" },

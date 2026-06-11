@@ -20,6 +20,7 @@ local T = PC.Trials
 --   counter  like kill but endless; milestones={{count,honorific},...}
 --   proc     aura="Mace Stun Effect", count — your aura landing on foes
 --   multihit spell="Thunder Clap", hits=3, count — one cast striking N foes
+--   crit     count — your own melee/ability critical strikes (not the pet's)
 --   loot     item="Dark Iron Ore", count
 --   equip    items={"item name", ...} — wield/wear any one of them
 --   cast     spell="Heavy Copper Maul", zone?, subzone?
@@ -453,7 +454,7 @@ end
 
 -- Normalized combat-log entry point (the frame handler unpacks CLEU args;
 -- tests call this directly).
-function T.OnCombatEvent(subevent, sourceGUID, destGUID, destName, spellName)
+function T.OnCombatEvent(subevent, sourceGUID, destGUID, destName, spellName, critical)
     if not activeDef() then return end
     local now = GetTime()
     local mine = sourceGUID ~= nil and
@@ -461,6 +462,11 @@ function T.OnCombatEvent(subevent, sourceGUID, destGUID, destName, spellName)
             (UnitExists("pet") and sourceGUID == UnitGUID("pet")))
 
     if mine and destGUID then
+        if critical and sourceGUID == UnitGUID("player") then
+            eachActive(function(def, trial)
+                if trial.kind == "crit" then bump(def, trial, 1) end
+            end)
+        end
         if subevent == "PARTY_KILL" or subevent:find("_DAMAGE", 1, true) then
             recentDamage[destGUID] = now + 120
             damageInserts = damageInserts + 1
@@ -593,6 +599,7 @@ local KIND_FIELDS = {
     kill     = {},
     counter  = { "milestones" },
     proc     = { "aura", "count" },
+    crit     = { "count" },
     multihit = { "spell", "hits", "count" },
     loot     = { "item", "count" },
     equip    = { "items" },
@@ -707,7 +714,15 @@ function T.Init()
         if event == "COMBAT_LOG_EVENT_UNFILTERED" then
             local _, sub, _, srcGUID, _, _, _, dstGUID, dstName, _, _, _, spellName =
                 CombatLogGetCurrentEventInfo()
-            T.OnCombatEvent(sub, srcGUID, dstGUID, dstName, spellName)
+            -- The critical flag sits at the end of the damage payload:
+            -- SWING_DAMAGE arg 18, SPELL_/RANGE_DAMAGE arg 21.
+            local critical
+            if sub == "SWING_DAMAGE" then
+                critical = select(18, CombatLogGetCurrentEventInfo())
+            elseif sub == "SPELL_DAMAGE" or sub == "RANGE_DAMAGE" then
+                critical = select(21, CombatLogGetCurrentEventInfo())
+            end
+            T.OnCombatEvent(sub, srcGUID, dstGUID, dstName, spellName, critical)
         elseif event == "PLAYER_TARGET_CHANGED" then
             T.NoteUnit("target")
         elseif event == "UPDATE_MOUSEOVER_UNIT" then

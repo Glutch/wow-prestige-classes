@@ -112,6 +112,7 @@ loadmod("Data.lua")
 loadmod("Compliance.lua")
 loadmod("Trials.lua")
 loadmod("Trials/MountainKing.lua")
+loadmod("Trials/Blademaster.lua")
 
 local T = PC.Trials
 
@@ -153,11 +154,13 @@ check("rank 1", rank == 1)
 check("title Initiate", title == "Initiate")
 check("nothing pending", pending == nil)
 
-print("\n[Rank] paths without trials rank by level alone")
+print("\n[Rank] browsed paths (and paths without trials) rank by level alone")
 world.level = 45
 T.InvalidateRank()
-local bRank = T.RankInfo(PC.ClassById.blademaster)
+local bRank = T.RankInfo(PC.ClassById.blademaster) -- has trials, but not walked
 check("non-active path uses level rank", bRank == 3)
+local zRank = T.RankInfo(PC.ClassById.berserker)   -- no trials at all
+check("trial-less path uses level rank", zRank == 3)
 world.level = 12
 T.InvalidateRank()
 
@@ -380,6 +383,76 @@ T.OnPathChanged()
 check("trials wiped", T.State("mk_oath") == nil)
 local r2 = T.RankInfo(mk)
 check("rank resets to 1 (deeds gone)", r2 == 1)
+
+-- ---- the Blademaster's journey ----------------------------------------------
+local bm = PC.ClassById.blademaster
+local function bmTrial(id)
+    for _, tr in ipairs(bm.trials) do
+        if tr.id == id then return tr end
+    end
+end
+
+print("\n[Blademaster] the journey lints clean")
+local bmProblems = T.Lint(bm)
+for _, p in ipairs(bmProblems) do print("    lint: " .. p) end
+check("blademaster lints clean", #bmProblems == 0)
+
+print("\n[Blademaster] an orc takes up the blade")
+world.race, world.raceName = "Orc", "Orc"
+world.level = 25
+world.talentTrees = { Arms = 11 }
+world.talentRanks = {}
+world.buffs = {}
+equip("MainHandSlot", "[Massive Iron Blade]", "Weapon", "Two-Handed Swords")
+world.equipped.RangedSlot = nil
+PrestigeClassesCharDB.active = "blademaster"
+T.OnPathChanged()
+check("clean book on the new path", T.State("bm_makgora") == nil)
+
+print("\n[Blademaster] the mak'gora demands solitude and clean vows")
+world.inGroup = true
+slay("Hezrul Bloodmark")
+check("no mak'gora with a warband", not T.IsComplete(bmTrial("bm_makgora")))
+world.inGroup = false
+equip("MainHandSlot", "[Some Axe]", "Weapon", "Two-Handed Axes") -- vow broken
+slay("Hezrul Bloodmark")
+check("no mak'gora with broken vows", not T.IsComplete(bmTrial("bm_makgora")))
+equip("MainHandSlot", "[Massive Iron Blade]", "Weapon", "Two-Handed Swords")
+slay("Hezrul Bloodmark")
+check("alone + clean = the khan falls", T.IsComplete(bmTrial("bm_makgora")))
+local bmRank = T.RankInfo(bm)
+check("Disciple after the first mak'gora", bmRank == 2)
+
+print("\n[Counter] the blood debt hears both cult names")
+slay("Burning Blade Fanatic")
+slay("Searing Blade Cultist")
+check("both cults pay the debt", T.State("bm_debt").progress == 2)
+check("the purge counts alongside", T.State("bm_purge").progress == 2)
+
+print("\n[Crit] fifty perfect cuts, player's hand only")
+T.OnCombatEvent("SWING_DAMAGE", "guid-player", "guid-q", "Razormane Hunter", nil, nil)
+local crit = T.State("bm_critical")
+check("plain swings are not the trial", crit == nil or crit.progress == 0)
+world.pet = true
+T.OnCombatEvent("SWING_DAMAGE", "guid-pet", "guid-q", "Razormane Hunter", nil, true)
+world.pet = false
+crit = T.State("bm_critical")
+check("a pet's crit does not count", crit == nil or crit.progress == 0)
+for i = 1, 49 do
+    T.OnCombatEvent("SWING_DAMAGE", "guid-player", "guid-q", "Razormane Hunter", nil, true)
+end
+T.OnCombatEvent("SPELL_DAMAGE", "guid-player", "guid-q", "Razormane Hunter", "Mortal Strike", true)
+check("fifty crits, swing and stroke alike", T.IsComplete(bmTrial("bm_critical")))
+local keenEdge = false
+for _, h in ipairs(T.Honorifics(bm)) do
+    if h == "Keen Edge" then keenEdge = true end
+end
+check("Keen Edge honorific", keenEdge)
+
+print("\n[Emote] the final bow waits for the Paragon")
+world.zone, world.subzone = "Durotar", "Valley of Trials"
+T.OnEmote("BOW")
+check("chapter IV sealed to a Disciple", not T.IsComplete(bmTrial("bm_firstdust")))
 
 -- ---- summary ---------------------------------------------------------------
 print(string.format("\n==== %d passed, %d failed ====", pass, fail))

@@ -318,7 +318,7 @@ world.level = 60
 clear()
 equip("MainHandSlot", "Sword2H", "Weapon", "Two-Handed Swords")
 world.talentTrees = { Arms = 31 }
-world.talentRanks = { ["Sweeping Strikes"] = 1, ["Mortal Strike"] = 1 }
+world.talentRanks = { ["Sweeping Strikes"] = 1, ["Sword Specialization"] = 5, ["Mortal Strike"] = 1 }
 local bl = PC.ClassById["blademaster"]
 local _, t60 = PC.Compliance.Evaluate(bl)
 check("compliant at 60 full Arms", t60.compliant == true)

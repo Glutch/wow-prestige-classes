@@ -2,7 +2,7 @@
 ## Title: Prestige Classes
 ## Notes: Roleplay "enhanced classes" for Classic Hardcore. Pick a prestige class and follow its ruleset to truly become it.
 ## Author: oli
-## Version: 2.2.0
+## Version: 2.3.0
 ## SavedVariablesPerCharacter: PrestigeClassesCharDB
 ## IconTexture: Interface\Icons\Ability_Warrior_Challange
 
@@ -12,5 +12,6 @@ Compliance.lua
 Alerts.lua
 Trials.lua
 Trials\MountainKing.lua
+Trials\Blademaster.lua
 UI.lua
 Core.lua

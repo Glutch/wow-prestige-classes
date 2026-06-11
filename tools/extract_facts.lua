@@ -29,6 +29,7 @@ for _, def in ipairs(PC.Classes) do
         if trial.subzone then fact("subzone", trial.subzone, src) end
         if trial.spell then fact("spell", trial.spell, src) end
         if trial.aura then fact("spell", trial.aura, src) end -- auras are spells
+        if trial.requireBuff then fact("spell", trial.requireBuff, src) end
         if trial.item then fact("item", trial.item, src) end
         for _, item in ipairs(trial.items or {}) do
             fact("item", item, src)
