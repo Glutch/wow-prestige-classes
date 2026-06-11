@@ -493,9 +493,8 @@ local function createDetailPane(f)
     pane.scroll = scroll
     pane.scrollChild = child
 
-    -- requirements panel
+    -- requirements panel (anchored in refreshDetail, below the item strips)
     local reqPanel = Theme.Panel(child)
-    reqPanel:SetPoint("TOPLEFT", 0, 0)
     reqPanel:SetWidth(REQ_W)
     pane.reqPanel = reqPanel
     local reqHead = Theme.Text(reqPanel, "display", 10, Theme.COLOR.muted)
@@ -510,7 +509,6 @@ local function createDetailPane(f)
 
     -- vows panel
     local vowPanel = Theme.Panel(child)
-    vowPanel:SetPoint("TOPLEFT", REQ_W + 12, 0)
     vowPanel:SetWidth(VOW_W)
     pane.vowPanel = vowPanel
     local vowHead = Theme.Text(vowPanel, "display", 10, Theme.COLOR.muted)
@@ -595,9 +593,14 @@ local function refreshDetail(f)
     pane.reqPanel:SetHeight(pane.reqText:GetStringHeight() + 46)
     pane.vowPanel:SetHeight(pane.vowText:GetStringHeight() + 46)
 
+    -- item strips first, the two panels below them
+    local y = layoutItemStrips(pane, def, 0)
+    pane.reqPanel:ClearAllPoints()
+    pane.reqPanel:SetPoint("TOPLEFT", 0, y)
+    pane.vowPanel:ClearAllPoints()
+    pane.vowPanel:SetPoint("TOPLEFT", REQ_W + 12, y)
     local panelBottom = math.max(pane.reqPanel:GetHeight(), pane.vowPanel:GetHeight())
-    local y = layoutItemStrips(pane, def, -(panelBottom + 18))
-    pane.scrollChild:SetHeight(-y + 10)
+    pane.scrollChild:SetHeight(-y + panelBottom + 10)
     -- jump to the top on a new path, but keep the reader's place on the
     -- live re-evals Core fires while the window is open
     if pane.shownId ~= def.id then
@@ -1017,11 +1020,12 @@ end
 local function createCharacterSidebar()
     if not CharacterFrame then return end
     local panel = Theme.Panel(CharacterFrame)
-    panel:SetSize(240, 410)
-    -- Classic's CharacterFrame texture has transparent padding on the right;
-    -- the negative offset tucks the panel against the visible border.
+    panel:SetWidth(240)
+    -- Classic's CharacterFrame texture has transparent padding on the right
+    -- and below; the negative offsets tuck the panel against the visible
+    -- border and run it the full height of the sheet.
     panel:SetPoint("TOPLEFT", CharacterFrame, "TOPRIGHT", -34, -13)
-    panel.bg:SetVertexColor(1, 1, 1, 1)
+    panel:SetPoint("BOTTOMLEFT", CharacterFrame, "BOTTOMRIGHT", -34, 76)
     UI.sidebar = panel
 
     local slot = Theme.IconSlot(panel, 34)
@@ -1060,13 +1064,19 @@ local function createCharacterSidebar()
     recordFS:SetSpacing(3)
     panel.record = recordFS
 
-    local btn = Theme.Button(panel, "Open the Codex")
-    btn:SetSize(212, 24)
-    btn:SetPoint("BOTTOM", 0, 14)
-    btn:SetScript("OnClick", function()
+    local codexBtn = Theme.Button(panel, "Codex")
+    codexBtn:SetSize(102, 24)
+    codexBtn:SetPoint("BOTTOMLEFT", 14, 14)
+    codexBtn:SetScript("OnClick", function()
         if UI.frame and not UI.frame:IsShown() then UI.Toggle() end
     end)
-    panel.btn = btn
+    panel.codexBtn = codexBtn
+
+    local pathBtn = Theme.Button(panel, "Path")
+    pathBtn:SetSize(102, 24)
+    pathBtn:SetPoint("BOTTOMRIGHT", -14, 14)
+    pathBtn:SetScript("OnClick", function() UI.OpenJournal() end)
+    panel.pathBtn = pathBtn
 
     -- Parented to CharacterFrame, so visibility follows it; refresh on open.
     panel:SetScript("OnShow", function() UI.RefreshCharacterSidebar() end)
@@ -1086,9 +1096,15 @@ function UI.RefreshCharacterSidebar()
         panel.status:SetText(GREY .. "Commit to a path and its vows will be watched here." .. R)
         panel.body:SetText("")
         panel.record:SetText(GREY .. "/pc opens the codex" .. R)
-        panel.btn.SetLabel("Choose a Path")
+        panel.codexBtn.SetLabel("Choose a Path")
+        panel.codexBtn:SetSize(212, 24)
+        panel.pathBtn:Hide()
         return
     end
+    panel.codexBtn.SetLabel("Codex")
+    panel.codexBtn:SetSize(102, 24)
+    panel.pathBtn:Show()
+    panel.pathBtn:SetEnabled(def.trials ~= nil)
 
     panel.slot.icon:SetTexture(def.icon)
     panel.name:SetText(def.name)
@@ -1146,7 +1162,6 @@ function UI.RefreshCharacterSidebar()
         rec[#rec + 1] = TEXT .. "Deeds done: " .. R .. GOLD .. done .. "/" .. total .. R
     end
     panel.record:SetText(table.concat(rec, "\n"))
-    panel.btn.SetLabel("Open the Codex")
 end
 
 -- ------------------------------------------------------------------------
