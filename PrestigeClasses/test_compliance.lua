@@ -277,6 +277,62 @@ check("compliant with Engineering", t2.compliant == true)
 world.skills = {}
 
 -- ========================================================================
+-- Test 8b: Mountain King — weapon profiles (2H mace OR dual 1H mace/axe)
+-- ========================================================================
+print("\n[Mountain King] dwarf warrior, 2H hammer, gun")
+world.class, world.className = "WARRIOR", "Warrior"
+world.race, world.raceName = "Dwarf", "Dwarf"
+world.level = 30
+clear()
+world.talentTrees = { Arms = 16 }
+world.talentRanks = {}
+equip("MainHandSlot", "Maul2H", "Weapon", "Two-Handed Maces")
+equip("RangedSlot", "Boomstick", "Weapon", "Guns")
+local mk = PC.ClassById["mountainking"]
+local _, m1 = PC.Compliance.Evaluate(mk)
+check("2H hammer compliant", m1.compliant == true)
+
+print("[Mountain King] 1H hammer + 1H axe -> compliant (WC3 arms)")
+equip("MainHandSlot", "Warhammer1H", "Weapon", "One-Handed Maces")
+equip("SecondaryHandSlot", "Handaxe1H", "Weapon", "One-Handed Axes")
+local _, m2 = PC.Compliance.Evaluate(mk)
+check("dual hammer/axe compliant", m2.compliant == true)
+
+print("[Mountain King] twin 1H hammers -> compliant")
+equip("SecondaryHandSlot", "Hammer1H_b", "Weapon", "One-Handed Maces")
+local _, m3 = PC.Compliance.Evaluate(mk)
+check("dual hammers compliant", m3.compliant == true)
+
+print("[Mountain King] lone 1H hammer, empty off-hand -> broken")
+world.equipped.SecondaryHandSlot = nil
+local _, m4 = PC.Compliance.Evaluate(mk)
+check("lone one-hander broken", m4.compliant == false)
+
+print("[Mountain King] 1H hammer + shield -> broken")
+equip("SecondaryHandSlot", "Towershield", "Armor", "Shields")
+local _, m5 = PC.Compliance.Evaluate(mk)
+check("hammer + shield broken", m5.compliant == false)
+
+print("[Mountain King] 1H hammer + 1H sword -> broken")
+equip("SecondaryHandSlot", "Shortsword", "Weapon", "One-Handed Swords")
+local _, m6 = PC.Compliance.Evaluate(mk)
+check("hammer + sword broken", m6.compliant == false)
+
+print("[Mountain King] 2H axe -> broken (hand axes only)")
+clear()
+equip("MainHandSlot", "Greataxe2H", "Weapon", "Two-Handed Axes")
+equip("RangedSlot", "Boomstick", "Weapon", "Guns")
+local _, m7 = PC.Compliance.Evaluate(mk)
+check("2H axe broken", m7.compliant == false)
+
+print("[Mountain King] fishing pole -> vow rests")
+clear()
+equip("MainHandSlot", "Pole", "Weapon", "Fishing Poles")
+equip("RangedSlot", "Boomstick", "Weapon", "Guns")
+local _, m8 = PC.Compliance.Evaluate(mk)
+check("fishing pole compliant", m8.compliant == true)
+
+-- ========================================================================
 -- Test 9: Eligibility helper
 -- ========================================================================
 print("\n[Eligible] race/class gating")

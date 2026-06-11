@@ -12,6 +12,9 @@ local ADDON, PC = ...
 --   forbidSlots       = { "HeadSlot", ... }     these slots must stay EMPTY
 --   maxArmor          = "Cloth"|"Leather"|"Mail" no worn armor heavier than this
 --   weaponTypes       = { "Two-Handed Swords" } main/off-hand weapons limited to these
+--   weaponProfiles    = { label = "...",        alternative armaments; held weapons
+--     { types = { "Two-Handed Maces" } },       must satisfy ANY one profile —
+--     { types = { ... }, dual = true } }        `dual` demands both hands armed
 --   requireDualWield  = true                    both hands must hold a weapon
 --   forbidShield      = true                    off-hand may not be a Shield
 --   rangedTypes       = { "Guns", ... }         ranged slot must hold one of these
@@ -82,10 +85,16 @@ PC.Classes = {
         source = "Alliance Player's Guide",
         faction = "Alliance",
         icon = ICONS .. "INV_Hammer_05",
-        fantasy = "A legendary dwarven warrior wreathed in plate, swinging a massive hammer and hurling thunder. Immovable and proud.",
+        fantasy = "A legendary dwarven warrior wreathed in plate, bearing warhammer and hand axe, hurling thunder. Immovable and proud.",
         races = { "Dwarf" },
         classes = { "WARRIOR" },
-        weaponTypes = { "Two-Handed Maces" },
+        -- WC3 unit data lists the thane's arms as "Warhammer, Hand axe":
+        -- one great two-hander, or hammer-and-hand-axe in each fist.
+        weaponProfiles = {
+            label = "2H hammer, or dual 1H hammers/hand axes",
+            { types = { "Two-Handed Maces" } },
+            { types = { "One-Handed Maces", "One-Handed Axes" }, dual = true },
+        },
         rangedTypes = { "Guns" },
         talents = {
             tree = { name = "Arms", points = 31 },
@@ -98,7 +107,7 @@ PC.Classes = {
         breakCry = "The mountain crumbles! Take up the hammer, son of Khaz Modan.",
         restoreCry = "Stone and storm! The Mountain King stands again.",
         honorRules = {
-            "Carry a two-handed hammer (mace) — the Storm Bolt is thrown, never sheathed.",
+            "Bear the thane's arms — one great warhammer, or hammer and hand axe in each fist. The Storm Bolt is thrown, never sheathed.",
             "Keep a gun on your back to mimic the King's ranged thunder.",
             "Stand and fight as a dwarf should — never flee a winnable brawl.",
         },

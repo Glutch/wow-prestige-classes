@@ -3,8 +3,9 @@ local ADDON, PC = ...
 -- =========================================================================
 -- THE MOUNTAIN KING'S JOURNEY
 -- =========================================================================
--- Dwarf warrior, two-handed hammer, gun on the back. Four chapters from
--- Coldridge Valley to the Molten Core, plus one grudge that never closes.
+-- Dwarf warrior, warhammer and hand axe, gun on the back. Four chapters
+-- from Coldridge Valley to the Molten Core, plus one grudge that never
+-- closes.
 -- Trial format: see the top of Trials.lua.
 -- =========================================================================
 
@@ -179,7 +180,7 @@ PC.RegisterTrials("mountainking", {
             name = "The Usurper",
             objective = "Slay Emperor Dagran Thaurissan, vows clean",
             text = "Dagran Thaurissan calls himself Emperor in a mountain his fathers stole. Walk into the Imperial Seat with your vows clean and end the family business.",
-            completionNote = "He carried Ironfoe — a one-handed mace. A lesser dwarf's weapon. Leave it.",
+            completionNote = "He carried Ironfoe — Franclorn Forgewright's stolen masterwork. In a thane's main fist, a hand axe beside it, it serves honest folk at last.",
         },
 
         -- ---- Chapter IV: mythic deeds (Paragon) --------------------------

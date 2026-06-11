@@ -136,6 +136,70 @@ local function checkWeaponTypes(def, out)
     out[#out + 1] = res("Weapon: " .. joinOr(def.weaponTypes), ok, detail, "rule")
 end
 
+-- Some paths allow alternative armaments — the Mountain King's WC3 unit
+-- data lists "Warhammer, Hand axe", so he may bear one great hammer OR a
+-- hammer/hand-axe pair. def.weaponProfiles is a list of profiles; holding
+-- weapons that satisfy ANY one profile keeps the vow. A profile is
+-- { types = {...}, dual = true? }: every held weapon's subtype must be in
+-- types, and `dual` demands a weapon in both hands. `.label` names the
+-- rule in the UI.
+local function checkWeaponProfiles(def, out)
+    if not def.weaponProfiles then return end
+    local held = {}
+    local fishing = false
+    for _, slot in ipairs({ "MainHandSlot", "SecondaryHandSlot" }) do
+        local link = Util.EquippedLink(slot)
+        if link then
+            local itemType, subType = Util.ItemTypeInfo(link)
+            if itemType == "Weapon" then
+                if subType == "Fishing Poles" then
+                    fishing = true
+                else
+                    held[#held + 1] = { link = link, subType = subType }
+                end
+            end
+        end
+    end
+
+    local ok = false
+    local typesFitSomewhere = false -- right kinds, but a hand left empty
+    for _, p in ipairs(def.weaponProfiles) do
+        local typesFit = #held > 0
+        for _, w in ipairs(held) do
+            if not Util.ListContains(p.types, w.subType) then
+                typesFit = false
+                break
+            end
+        end
+        if typesFit then
+            typesFitSomewhere = true
+            if not p.dual or #held == 2 then
+                ok = true
+                break
+            end
+        end
+    end
+
+    local detail
+    if ok then
+        detail = "Your arms fit the discipline"
+    elseif #held == 0 and fishing then
+        ok = true
+        detail = "Fishing — the vow rests while you fish"
+    elseif #held == 0 then
+        detail = "Take up the path's arms"
+    elseif typesFitSomewhere then
+        detail = "Arm your other hand — a lone one-hander honors no profile"
+    else
+        local links = {}
+        for _, w in ipairs(held) do links[#links + 1] = w.link end
+        detail = "Wrong arms: " .. table.concat(links, ", ")
+    end
+    out[#out + 1] = res(
+        "Weapon: " .. (def.weaponProfiles.label or joinOr(def.weaponProfiles[1].types)),
+        ok, detail, "rule")
+end
+
 local function checkDualWield(def, out)
     if not def.requireDualWield then return end
     local holding = 0
@@ -333,6 +397,7 @@ function C.Evaluate(def)
     checkForbiddenSlots(def, out)
     checkMaxArmor(def, out)
     checkWeaponTypes(def, out)
+    checkWeaponProfiles(def, out)
     checkDualWield(def, out)
     checkForbidShield(def, out)
     checkRangedTypes(def, out)
