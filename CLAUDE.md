@@ -17,8 +17,10 @@ cd PrestigeClasses
 lua test_compliance.lua    # offline tests, mocks the WoW API — keep green
 for f in *.lua; do luac -p "$f"; done   # syntax check
 
-# install for live testing, then /reload in game
-cp PrestigeClasses.toc *.lua "/Applications/World of Warcraft/_classic_era_/Interface/AddOns/PrestigeClasses/"
+# install for live testing, then /reload in game (Fonts/ + Trials/ too)
+DEST="/Applications/World of Warcraft/_classic_era_/Interface/AddOns/PrestigeClasses"
+cp PrestigeClasses.toc *.lua "$DEST/" && cp Trials/*.lua "$DEST/Trials/" && cp Fonts/* "$DEST/Fonts/"
+rm -f "$DEST"/test_*.lua
 ```
 
 `test_compliance.lua` is dev-only — never list it in the `.toc`. When adding a
@@ -30,10 +32,11 @@ mocks (`world.talentTrees`, `world.equipped`, etc. — see top of file).
 | File | Role |
 |---|---|
 | `Util.lua` | WoW API introspection: race/class tokens, equipped links, item type info, professions, `TalentSummary()` |
+| `Theme.lua` | Design system mirroring the website (dark stone, gold trim, Cinzel/Alegreya from `Fonts/`, panel/chip/slot/progress factories, ember pulse + rise animations, slim scrollbars). Fonts fall back to stock if `Fonts/` is missing |
 | `Data.lua` | `PC.Classes` rulesets. Full field reference in its header comment. Pure data — no logic |
 | `Compliance.lua` | `Evaluate(def)` → ordered check results + summary; `Eligible(def)` (race/class only) |
 | `Alerts.lua` | Transition-only warnings: red screen flash, per-class break/restore cries, increments `stats.breaks` |
-| `UI.lua` | Two-page window (browse grouped by WoW class → full-window detail), abandon confirm popup, draggable minimap button |
+| `UI.lua` | Three-page window (browse card grid → hero detail → journal with road/deed cards), abandon confirm popup, character-sheet sidebar, draggable minimap button. Built entirely on `Theme` factories — no stock backdrops |
 | `Core.lua` | Event wiring, `PC.Refresh()`, slash commands (`/pc`, status/list/suggest/abandon/help) |
 
 Modules share the private addon table: `local ADDON, PC = ...`.
